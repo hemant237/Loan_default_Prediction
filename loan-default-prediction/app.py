@@ -29,12 +29,38 @@ MODEL_PATH = Path(__file__).resolve().parent / "models" / "loan_default_model.pk
 
 @st.cache_resource
 def load_model():
-    if not MODEL_PATH.exists():
-        return None
-    return joblib.load(MODEL_PATH)
+    if MODEL_PATH.exists():
+        return joblib.load(MODEL_PATH)
+    
+    # Train a quick model on the fly for demo purposes
+    st.info("Training model for demo... (takes ~30 seconds)")
+    import pandas as pd
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import Pipeline
+    from sklearn.impute import SimpleImputer
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.compose import ColumnTransformer
+    from sklearn.model_selection import train_test_split
 
-model = load_model()
-
+    df = pd.read_csv(Path(__file__).parent / "data" / "loan_default_dataset.csv")
+    X = add_features(df.drop(columns=["default"]))
+    y = df["default"]
+    X_train, _, y_train, _ = train_test_split(X, y, test_size=0.2,
+                                               random_state=42, stratify=y)
+    features = X_train.columns.tolist()
+    pre = ColumnTransformer([("num", Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+    ]), features)])
+    model = Pipeline([
+        ("preprocessor", pre),
+        ("classifier", LogisticRegression(
+            C=1.0, class_weight="balanced",
+            solver="lbfgs", max_iter=1000, random_state=42
+        ))
+    ])
+    model.fit(X_train, y_train)
+    return model
 # ── Header ─────────────────────────────────────────────────────────────────── #
 st.title("🏦 Loan Default Risk Predictor")
 st.markdown(
