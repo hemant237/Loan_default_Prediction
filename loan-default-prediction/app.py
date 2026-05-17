@@ -35,7 +35,11 @@ def add_features(df):
 # ── Train model on the fly ─────────────────────────────────────────────────── #
 @st.cache_resource
 def load_model():
-    data_path = Path(__file__).parent / "data" / "loan_default_dataset.csv"
+    data_path = Path(__file__).resolve().parent / "data" / "loan_default_dataset.csv"
+
+# fallback for nested folder structure on Streamlit Cloud
+if not data_path.exists():
+    data_path = Path(__file__).resolve().parent.parent / "data" / "loan_default_dataset.csv"
     
     with st.spinner("Training model for demo — please wait ~60 seconds..."):
         df = pd.read_csv(data_path)
